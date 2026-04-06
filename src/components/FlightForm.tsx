@@ -26,7 +26,10 @@ type FlightFormValues = z.infer<typeof flightSchema>
 
 function toDatetimeLocal(iso: string) {
   if (!iso) return ''
-  return iso.slice(0, 16) // "YYYY-MM-DDTHH:mm"
+  const d = new Date(iso)
+  const offset = d.getTimezoneOffset()
+  const local = new Date(d.getTime() - offset * 60000)
+  return local.toISOString().slice(0, 16)
 }
 
 function fromDatetimeLocal(local: string) {
