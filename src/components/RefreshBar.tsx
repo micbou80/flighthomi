@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { RefreshCw } from 'lucide-react'
 
 function timeAgo(date: Date): string {
@@ -19,6 +20,7 @@ function nextCronIn(): string {
 }
 
 export default function RefreshBar() {
+  const router = useRouter()
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
   const [countdown, setCountdown] = useState(nextCronIn())
   const [loading, setLoading] = useState(false)
@@ -37,10 +39,11 @@ export default function RefreshBar() {
     try {
       await fetch('/api/refresh', { method: 'POST' })
       setLastRefreshed(new Date())
+      router.refresh()
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [router])
 
   return (
     <div className="flex items-center justify-between text-xs text-gray-500 px-1">
