@@ -25,6 +25,8 @@ FLIGHTAWARE_API_KEY=      # optional — enables auto-population in FlightForm
 
 Users must be created manually via the Supabase Auth dashboard (no self-registration).
 
+**Important:** `NEXT_PUBLIC_` vars are baked in at build time. Changing them in Vercel requires a full rebuild triggered by a new commit — the Vercel "Redeploy" button reuses the cached build artifact and will not pick up changes.
+
 ## Architecture
 
 Next.js 14 App Router + Supabase (Postgres + Auth) + FlightAware AeroAPI. Deployed on Vercel.
@@ -52,15 +54,24 @@ Two clients in `src/lib/supabase/`:
 
 `FlightStatus`: `'scheduled' | 'in_air' | 'landed' | 'cancelled'`
 
-`Flight` stores IATA codes for `origin`/`destination`, ISO timestamps for `departure_time`/`arrival_time`, and an optional `seat` and `notes`.
+`Flight` core fields: IATA codes for `origin_code`/`destination_code`, ISO timestamps for `departure_time`/`arrival_time`, optional `seat` and `notes`.
+
+`Flight` tracking fields (populated from FlightAware, all nullable):
+- `actual_departure_time` / `actual_arrival_time` — wheels-up / wheels-down times
+- `estimated_arrival_time` — live ETA
+- `progress_percent` — FA's 0–100 progress value
+- `departure_delay` / `arrival_delay` — delay in minutes
+- `departure_gate` / `arrival_gate`
+- `route` — raw waypoint string
 
 `ShareToken` links a user to a short random token; the `/shared` page validates the token and renders flights in read-only mode.
 
 ### FlightAware integration
 
-`src/lib/flightaware.ts` wraps the AeroAPI. Called from `/api/flight-lookup` with `?fn=<flight_number>&date=<YYYY-MM-DD>`. Returns enriched flight details used to pre-fill `FlightForm`. Gracefully returns `null` on 404 (flight not found).
+`src/lib/flightaware.ts` wraps the AeroAPI. Called from `/api/flight-lookup` with `?fn=<flight_number>&date=<YYYY-MM-DD>`. Populates both the form fields and all tracking fields. Delay values from the API are in seconds and converted to minutes on ingest. Returns `null` on 404.
+
+To refresh tracking data on an existing flight, re-run the lookup from the edit page.
 
 ### Database
 
 Migrations live in `supabase/migrations/`. RLS policies ensure users can only access their own rows in `flights` and `share_tokens`. The service role client is required for any operation that crosses user boundaries.
-# generated Mon Apr  6 16:52:13 CEST 2026
