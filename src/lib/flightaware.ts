@@ -9,8 +9,17 @@ interface AeroAPIFlight {
   destination: { code_iata: string }
   scheduled_out: string
   scheduled_in: string
+  actual_off: string | null   // wheels up
+  actual_on: string | null    // wheels down
+  estimated_in: string | null // estimated gate arrival
   aircraft_type: string | null
   status: string
+  progress_percent: number | null
+  departure_delay: number | null  // seconds
+  arrival_delay: number | null    // seconds
+  gate_origin: string | null
+  gate_destination: string | null
+  route: string | null
 }
 
 interface AeroAPIResponse {
@@ -25,6 +34,11 @@ function mapStatus(raw: string): FlightStatus {
   return 'scheduled'
 }
 
+function secToMin(seconds: number | null): number | null {
+  if (seconds == null) return null
+  return Math.round(seconds / 60)
+}
+
 export async function lookupFlight(
   flightNumber: string,
   date: string // YYYY-MM-DD
@@ -32,7 +46,6 @@ export async function lookupFlight(
   const apiKey = process.env.FLIGHTAWARE_API_KEY
   if (!apiKey) throw new Error('FLIGHTAWARE_API_KEY is not set')
 
-  // Search a 24-hour window starting at the given date
   const start = `${date}T00:00:00Z`
   const nextDay = new Date(date)
   nextDay.setDate(nextDay.getDate() + 1)
@@ -42,7 +55,7 @@ export async function lookupFlight(
 
   const res = await fetch(url, {
     headers: { 'x-apikey': apiKey },
-    next: { revalidate: 0 }, // always fresh
+    next: { revalidate: 0 },
   })
 
   if (!res.ok) {
@@ -63,5 +76,14 @@ export async function lookupFlight(
     arrival_time: flight.scheduled_in,
     aircraft_type: flight.aircraft_type ?? null,
     status: mapStatus(flight.status ?? ''),
+    actual_departure_time: flight.actual_off ?? null,
+    actual_arrival_time: flight.actual_on ?? null,
+    estimated_arrival_time: flight.estimated_in ?? null,
+    progress_percent: flight.progress_percent ?? null,
+    departure_delay: secToMin(flight.departure_delay),
+    arrival_delay: secToMin(flight.arrival_delay),
+    departure_gate: flight.gate_origin ?? null,
+    arrival_gate: flight.gate_destination ?? null,
+    route: flight.route ?? null,
   }
 }

@@ -19,34 +19,55 @@ function formatMins(mins: number): string {
 export default function FlightCard({ flight, readOnly = false }: FlightCardProps) {
   const isInAir = flight.status === 'in_air'
 
-  let progress = 0
+  // Progress: prefer FlightAware's value, fall back to time-based
+  let progress = flight.progress_percent ?? 0
   let remainingMins = 0
   let elapsedMins = 0
 
   if (isInAir) {
-    const now = Date.now()
-    const dep = new Date(flight.departure_time).getTime()
-    const arr = new Date(flight.arrival_time).getTime()
-    const total = arr - dep
-    const elapsed = now - dep
-    progress = Math.min(100, Math.max(0, (elapsed / total) * 100))
-    remainingMins = Math.max(0, Math.floor((arr - now) / 60000))
-    elapsedMins = Math.max(0, Math.floor(elapsed / 60000))
+    if (flight.progress_percent == null) {
+      const now = Date.now()
+      const dep = new Date(flight.actual_departure_time ?? flight.departure_time).getTime()
+      const arr = new Date(flight.estimated_arrival_time ?? flight.arrival_time).getTime()
+      const total = arr - dep
+      progress = Math.min(100, Math.max(0, ((now - dep) / total) * 100))
+      elapsedMins = Math.max(0, Math.floor((now - dep) / 60000))
+    } else {
+      const dep = new Date(flight.actual_departure_time ?? flight.departure_time).getTime()
+      elapsedMins = Math.max(0, Math.floor((Date.now() - dep) / 60000))
+    }
+    const eta = new Date(flight.estimated_arrival_time ?? flight.arrival_time).getTime()
+    remainingMins = Math.max(0, Math.floor((eta - Date.now()) / 60000))
   }
+
+  const delay = flight.arrival_delay ?? flight.departure_delay ?? null
+  const etaTime = flight.estimated_arrival_time
+    ? formatTime(flight.estimated_arrival_time)
+    : null
 
   const card = (
     <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 hover:border-gray-700 transition-colors">
-      {/* Top row: date + status */}
+      {/* Top row: date + status + delay */}
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs text-gray-400">{formatDate(flight.departure_time)}</p>
-        <FlightStatusBadge status={flight.status} />
+        <div className="flex items-center gap-2">
+          {delay != null && delay > 0 && (
+            <span className="text-xs font-medium text-amber-400">+{delay}m</span>
+          )}
+          <FlightStatusBadge status={flight.status} />
+        </div>
       </div>
 
       {/* Route */}
       <div className="flex items-center gap-3 mb-3">
         <div className="text-center min-w-[56px]">
           <p className="text-2xl font-bold text-white">{flight.origin_code}</p>
-          <p className="text-xs text-gray-400">{formatTime(flight.departure_time)}</p>
+          <p className="text-xs text-gray-400">
+            {formatTime(flight.actual_departure_time ?? flight.departure_time)}
+          </p>
+          {flight.departure_gate && (
+            <p className="text-xs text-gray-500">Gate {flight.departure_gate}</p>
+          )}
         </div>
 
         <div className="flex-1 flex flex-col items-center gap-1.5">
@@ -74,7 +95,7 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
             <>
               <div className="flex items-center gap-1 w-full">
                 <div className="h-px flex-1 bg-gray-700" />
-                <Plane className="h-4 w-4 text-blue-400 rotate-0" />
+                <Plane className="h-4 w-4 text-blue-400" />
                 <div className="h-px flex-1 bg-gray-700" />
               </div>
               <p className="text-xs text-gray-500">{formatDuration(flight.departure_time, flight.arrival_time)}</p>
@@ -84,15 +105,21 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
 
         <div className="text-center min-w-[56px]">
           <p className="text-2xl font-bold text-white">{flight.destination_code}</p>
-          <p className="text-xs text-gray-400">{formatTime(flight.arrival_time)}</p>
+          <p className={`text-xs ${etaTime && delay && delay > 0 ? 'line-through text-gray-600' : 'text-gray-400'}`}>
+            {formatTime(flight.arrival_time)}
+          </p>
+          {etaTime && delay && delay > 0 && (
+            <p className="text-xs text-amber-400 font-medium">{etaTime}</p>
+          )}
+          {flight.arrival_gate && (
+            <p className="text-xs text-gray-500">Gate {flight.arrival_gate}</p>
+          )}
         </div>
       </div>
 
       {/* Bottom row: airline + flight # + aircraft */}
       <div className="flex items-center justify-between text-xs text-gray-400">
-        <span>
-          {flight.airline} · {flight.flight_number}
-        </span>
+        <span>{flight.airline} · {flight.flight_number}</span>
         <span className="flex items-center gap-2">
           {flight.aircraft_type && <span>{flight.aircraft_type}</span>}
           {flight.seat && <span>Seat {flight.seat}</span>}
@@ -102,6 +129,5 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
   )
 
   if (readOnly) return card
-
   return <Link href={`/dashboard/flights/${flight.id}`}>{card}</Link>
 }

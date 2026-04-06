@@ -7,12 +7,21 @@ export interface Flight {
   airline: string
   origin_code: string
   destination_code: string
-  departure_time: string // ISO timestamptz
-  arrival_time: string   // ISO timestamptz
+  departure_time: string
+  arrival_time: string
   status: FlightStatus
   aircraft_type: string | null
   seat: string | null
   notes: string | null
+  actual_departure_time: string | null
+  actual_arrival_time: string | null
+  estimated_arrival_time: string | null
+  progress_percent: number | null
+  departure_delay: number | null  // minutes
+  arrival_delay: number | null    // minutes
+  departure_gate: string | null
+  arrival_gate: string | null
+  route: string | null
   created_at: string
 }
 
@@ -50,4 +59,13 @@ export interface FlightLookupResult {
   arrival_time: string
   aircraft_type: string | null
   status: FlightStatus
+  actual_departure_time: string | null
+  actual_arrival_time: string | null
+  estimated_arrival_time: string | null
+  progress_percent: number | null
+  departure_delay: number | null
+  arrival_delay: number | null
+  departure_gate: string | null
+  arrival_gate: string | null
+  route: string | null
 }
