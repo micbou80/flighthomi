@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Plane } from 'lucide-react'
-import { formatDate, formatTime, formatDuration } from '@/lib/utils'
+import { formatDuration } from '@/lib/utils'
+import { LocalTime, LocalDate, TimezoneLabel } from './LocalTime'
 import FlightStatusBadge from './FlightStatusBadge'
 import type { Flight } from '@/lib/types'
 
@@ -19,7 +20,6 @@ function formatMins(mins: number): string {
 export default function FlightCard({ flight, readOnly = false }: FlightCardProps) {
   const isInAir = flight.status === 'in_air'
 
-  // Progress: prefer FlightAware's value, fall back to time-based
   let progress = flight.progress_percent ?? 0
   let remainingMins = 0
   let elapsedMins = 0
@@ -41,17 +41,18 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
   }
 
   const delay = flight.arrival_delay ?? flight.departure_delay ?? null
-  const etaTime = flight.estimated_arrival_time
-    ? formatTime(flight.estimated_arrival_time)
-    : null
+  const hasDelay = delay != null && delay > 0
 
   const card = (
     <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 hover:border-gray-700 transition-colors">
-      {/* Top row: date + status + delay */}
+      {/* Top row: date + timezone + status + delay */}
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-gray-400">{formatDate(flight.departure_time)}</p>
+        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+          <LocalDate iso={flight.departure_time} />
+          <TimezoneLabel className="text-gray-600" />
+        </div>
         <div className="flex items-center gap-2">
-          {delay != null && delay > 0 && (
+          {hasDelay && (
             <span className="text-xs font-medium text-amber-400">+{delay}m</span>
           )}
           <FlightStatusBadge status={flight.status} />
@@ -63,7 +64,7 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
         <div className="text-center min-w-[56px]">
           <p className="text-2xl font-bold text-white">{flight.origin_code}</p>
           <p className="text-xs text-gray-400">
-            {formatTime(flight.actual_departure_time ?? flight.departure_time)}
+            <LocalTime iso={flight.actual_departure_time ?? flight.departure_time} />
           </p>
           {flight.departure_gate && (
             <p className="text-xs text-gray-500">Gate {flight.departure_gate}</p>
@@ -105,11 +106,13 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
 
         <div className="text-center min-w-[56px]">
           <p className="text-2xl font-bold text-white">{flight.destination_code}</p>
-          <p className={`text-xs ${etaTime && delay && delay > 0 ? 'line-through text-gray-600' : 'text-gray-400'}`}>
-            {formatTime(flight.arrival_time)}
+          <p className={`text-xs ${hasDelay && flight.estimated_arrival_time ? 'line-through text-gray-600' : 'text-gray-400'}`}>
+            <LocalTime iso={flight.arrival_time} />
           </p>
-          {etaTime && delay && delay > 0 && (
-            <p className="text-xs text-amber-400 font-medium">{etaTime}</p>
+          {hasDelay && flight.estimated_arrival_time && (
+            <p className="text-xs text-amber-400 font-medium">
+              <LocalTime iso={flight.estimated_arrival_time} />
+            </p>
           )}
           {flight.arrival_gate && (
             <p className="text-xs text-gray-500">Gate {flight.arrival_gate}</p>
