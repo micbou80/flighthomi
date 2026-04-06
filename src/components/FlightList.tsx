@@ -8,9 +8,8 @@ interface FlightListProps {
 }
 
 export default function FlightList({ flights, readOnly = false }: FlightListProps) {
-  const now = new Date()
-  const upcoming = flights.filter((f) => new Date(f.departure_time) >= now)
-  const past = flights.filter((f) => new Date(f.departure_time) < now)
+  const upcoming = flights.filter((f) => f.status !== 'landed' && f.status !== 'cancelled')
+  const past = flights.filter((f) => f.status === 'landed' || f.status === 'cancelled')
 
   if (flights.length === 0) {
     return (
