@@ -63,3 +63,4 @@ Two clients in `src/lib/supabase/`:
 ### Database
 
 Migrations live in `supabase/migrations/`. RLS policies ensure users can only access their own rows in `flights` and `share_tokens`. The service role client is required for any operation that crosses user boundaries.
+# generated Mon Apr  6 16:52:13 CEST 2026
