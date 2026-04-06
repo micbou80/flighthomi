@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import FlightList from '@/components/FlightList'
 import ShareLinkManager from '@/components/ShareLinkManager'
+import RefreshBar from '@/components/RefreshBar'
 import type { Flight, ShareToken } from '@/lib/types'
 
 export default async function DashboardPage() {
@@ -24,6 +25,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      <RefreshBar />
       <FlightList flights={(flights as Flight[]) ?? []} />
       <ShareLinkManager tokens={(tokens as ShareToken[]) ?? []} />
     </div>
