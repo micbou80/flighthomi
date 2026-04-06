@@ -67,7 +67,9 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
             <LocalTime iso={flight.actual_departure_time ?? flight.departure_time} />
           </p>
           {flight.departure_gate && (
-            <p className="text-xs text-gray-500">Gate {flight.departure_gate}</p>
+            <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-xs font-bold ${flight.departure_gate_changed ? 'bg-red-500 text-white' : 'bg-yellow-400 text-black'}`}>
+              {flight.departure_gate}
+            </span>
           )}
         </div>
 
@@ -115,7 +117,9 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
             </p>
           )}
           {flight.arrival_gate && (
-            <p className="text-xs text-gray-500">Gate {flight.arrival_gate}</p>
+            <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-xs font-bold ${flight.arrival_gate_changed ? 'bg-red-500 text-white' : 'bg-yellow-400 text-black'}`}>
+              {flight.arrival_gate}
+            </span>
           )}
         </div>
       </div>

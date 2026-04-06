@@ -76,6 +76,9 @@ export async function GET(request: NextRequest) {
         })
       }
 
+      const departureGateChanged = !!(fresh.departure_gate && fresh.departure_gate !== flight.departure_gate && flight.departure_gate !== null)
+      const arrivalGateChanged = !!(fresh.arrival_gate && fresh.arrival_gate !== flight.arrival_gate && flight.arrival_gate !== null)
+
       // Always update tracking fields
       updates.push({
         id: flight.id,
@@ -88,6 +91,8 @@ export async function GET(request: NextRequest) {
         arrival_delay: fresh.arrival_delay,
         departure_gate: fresh.departure_gate,
         arrival_gate: fresh.arrival_gate,
+        departure_gate_changed: departureGateChanged,
+        arrival_gate_changed: arrivalGateChanged,
       })
     } catch (err) {
       console.error(`Error checking flight ${flight.flight_number}:`, err)

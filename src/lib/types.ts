@@ -21,6 +21,8 @@ export interface Flight {
   arrival_delay: number | null    // minutes
   departure_gate: string | null
   arrival_gate: string | null
+  departure_gate_changed: boolean
+  arrival_gate_changed: boolean
   route: string | null
   created_at: string
 }
