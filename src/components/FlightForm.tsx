@@ -92,7 +92,7 @@ export default function FlightForm({ defaultValues, flightId }: FlightFormProps)
         return
       }
       const data: FlightLookupResult = await res.json()
-      setValue('flight_number', data.flight_number)
+      setValue('flight_number', lookupFn)
       setValue('airline', data.airline)
       setValue('origin_code', data.origin_code)
       setValue('destination_code', data.destination_code)
