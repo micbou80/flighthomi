@@ -22,36 +22,50 @@ export default function RefreshBar() {
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
   const [loading, setLoading] = useState(false)
   const loadingRef = useRef(false)
+  const pageLoadTime = useRef(Date.now())
 
-  const refresh = useCallback(async () => {
+  // Manual "Refresh now" — calls API to force a FlightAware update, then reloads
+  const manualRefresh = useCallback(async () => {
     if (loadingRef.current) return
     loadingRef.current = true
     setLoading(true)
     try {
       await fetch('/api/refresh', { method: 'POST' })
-      setLastRefreshed(new Date())
-      setSecs(INTERVAL)
-      window.location.reload()
-    } catch {
-      setSecs(INTERVAL)
     } finally {
       loadingRef.current = false
       setLoading(false)
+      setLastRefreshed(new Date())
+      window.location.reload()
     }
   }, [])
 
+  // Auto-reload countdown — just reloads the page; LaunchAgent keeps DB fresh
   useEffect(() => {
     const id = setInterval(() => {
       setSecs((prev) => {
         if (prev <= 1) {
-          refresh()
+          window.location.reload()
           return INTERVAL
         }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [refresh])
+  }, [])
+
+  // Reload when tab becomes visible after being hidden for >5 minutes
+  useEffect(() => {
+    const onVisible = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        Date.now() - pageLoadTime.current > INTERVAL * 1000
+      ) {
+        window.location.reload()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
 
   return (
     <div className="flex items-center justify-between text-xs text-gray-500 px-1">
@@ -62,7 +76,7 @@ export default function RefreshBar() {
         }
       </span>
       <button
-        onClick={refresh}
+        onClick={manualRefresh}
         disabled={loading}
         className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
       >
