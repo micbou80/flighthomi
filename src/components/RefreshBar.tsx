@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RefreshCw } from 'lucide-react'
 
 function timeAgo(date: Date): string {
@@ -11,46 +10,52 @@ function timeAgo(date: Date): string {
   return `${mins}m ago`
 }
 
-function nextCronIn(): string {
+function secsUntilNextCron(): number {
   const now = new Date()
-  const secs = 300 - ((now.getMinutes() % 5) * 60 + now.getSeconds())
+  return 300 - ((now.getMinutes() % 5) * 60 + now.getSeconds())
+}
+
+function formatSecs(secs: number): string {
   const m = Math.floor(secs / 60)
   const s = secs % 60
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
 export default function RefreshBar() {
-  const router = useRouter()
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
-  const [countdown, setCountdown] = useState(nextCronIn())
+  const [secs, setSecs] = useState(secsUntilNextCron())
   const [loading, setLoading] = useState(false)
-  const [, setTick] = useState(0)
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setCountdown(nextCronIn())
-      setTick(t => t + 1)
-    }, 1000)
-    return () => clearInterval(id)
-  }, [])
+  const refreshingRef = useRef(false)
 
   const refresh = useCallback(async () => {
+    if (refreshingRef.current) return
+    refreshingRef.current = true
     setLoading(true)
     try {
       await fetch('/api/refresh', { method: 'POST' })
       setLastRefreshed(new Date())
-      router.refresh()
-    } finally {
+      window.location.reload()
+    } catch {
       setLoading(false)
+      refreshingRef.current = false
     }
-  }, [router])
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const s = secsUntilNextCron()
+      setSecs(s)
+      if (s === 0) refresh()
+    }, 1000)
+    return () => clearInterval(id)
+  }, [refresh])
 
   return (
     <div className="flex items-center justify-between text-xs text-gray-500 px-1">
       <span>
         {lastRefreshed
-          ? <>Last refreshed: <span className="text-gray-400">{timeAgo(lastRefreshed)}</span> · Auto in <span className="text-gray-400">{countdown}</span></>
-          : <>Auto-refresh in <span className="text-gray-400">{countdown}</span></>
+          ? <>Last refreshed: <span className="text-gray-400">{timeAgo(lastRefreshed)}</span> · Next in <span className="text-gray-400">{formatSecs(secs)}</span></>
+          : <>Next refresh in <span className="text-gray-400">{formatSecs(secs)}</span></>
         }
       </span>
       <button
