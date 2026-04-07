@@ -39,22 +39,23 @@ export async function lookupFlightSchedule(
   const apiKey = process.env.AVIATIONSTACK_API_KEY
   if (!apiKey) return null
 
-  // Try with specific date first
-  const url = `${BASE}/flights?access_key=${apiKey}&flight_iata=${encodeURIComponent(flightIata)}&flight_date=${date}&limit=1`
+  let flight: ASFlight | undefined
 
-  const res = await fetch(url, { next: { revalidate: 0 } })
-  if (!res.ok) return null
+  // Try with specific date (paid feature — 403 on free tier, skip gracefully)
+  const dateUrl = `${BASE}/flights?access_key=${apiKey}&flight_iata=${encodeURIComponent(flightIata)}&flight_date=${date}&limit=1`
+  const dateRes = await fetch(dateUrl, { next: { revalidate: 0 } })
+  if (dateRes.ok) {
+    const data: ASResponse = await dateRes.json()
+    flight = data.data?.[0]
+  }
 
-  const data: ASResponse = await res.json()
-  let flight = data.data?.[0]
-
-  // If no result for specific date, fall back to most recent instance for route info
+  // Fall back to most recent instance and use its times as a schedule template
   if (!flight) {
-    const fallbackUrl = `${BASE}/flights?access_key=${apiKey}&flight_iata=${encodeURIComponent(flightIata)}&limit=1`
-    const r2 = await fetch(fallbackUrl, { next: { revalidate: 0 } })
-    if (!r2.ok) return null
-    const d2: ASResponse = await r2.json()
-    flight = d2.data?.[0]
+    const url = `${BASE}/flights?access_key=${apiKey}&flight_iata=${encodeURIComponent(flightIata)}&limit=1`
+    const res = await fetch(url, { next: { revalidate: 0 } })
+    if (!res.ok) return null
+    const data: ASResponse = await res.json()
+    flight = data.data?.[0]
     if (!flight) return null
   }
 
