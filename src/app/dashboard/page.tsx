@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import FlightList from '@/components/FlightList'
+import FlightCalendar from '@/components/FlightCalendar'
 import ShareLinkManager from '@/components/ShareLinkManager'
 import RefreshBar from '@/components/RefreshBar'
 import type { Flight, ShareToken } from '@/lib/types'
@@ -23,10 +24,13 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false }),
   ])
 
+  const flightData = (flights as Flight[]) ?? []
+
   return (
     <div className="space-y-8">
       <RefreshBar />
-      <FlightList flights={(flights as Flight[]) ?? []} />
+      <FlightCalendar flights={flightData} />
+      <FlightList flights={flightData} />
       <ShareLinkManager tokens={(tokens as ShareToken[]) ?? []} />
     </div>
   )
