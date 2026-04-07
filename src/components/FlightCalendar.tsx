@@ -97,17 +97,21 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
           return (
             <div
               key={key}
-              className={cn(
-                'flex flex-col items-center justify-center aspect-square rounded-lg text-xs transition-colors',
-                isToday
-                  ? 'bg-blue-600/20 text-blue-300 font-semibold ring-1 ring-blue-500/40'
-                  : 'text-gray-300',
-                hasFlight && !isToday && 'bg-gray-800'
-              )}
+              className="flex flex-col items-center justify-center aspect-square text-xs"
             >
-              <span>{day}</span>
+              <span
+                className={cn(
+                  'flex items-center justify-center w-7 h-7 rounded-full font-medium transition-colors',
+                  isToday && !hasFlight && 'bg-blue-600/20 text-blue-300 ring-1 ring-blue-500/40',
+                  hasFlight && 'ring-2 ring-red-500 text-white font-semibold',
+                  hasFlight && isToday && 'bg-blue-600/20',
+                  !isToday && !hasFlight && 'text-gray-300'
+                )}
+              >
+                {day}
+              </span>
               {hasFlight && (
-                <span className="text-[10px] leading-none mt-0.5" aria-label="Flight day">
+                <span className="text-[9px] leading-none mt-0.5 text-gray-400" aria-label="Flight day">
                   ✈
                 </span>
               )}
