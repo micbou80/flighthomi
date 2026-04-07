@@ -3,17 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { RefreshCw } from 'lucide-react'
 
-function timeAgo(date: Date): string {
-  const secs = Math.floor((Date.now() - date.getTime()) / 1000)
-  if (secs < 60) return 'just now'
-  const mins = Math.floor(secs / 60)
-  return `${mins}m ago`
-}
-
-function secsUntilNextCron(): number {
-  const now = new Date()
-  return 300 - ((now.getMinutes() % 5) * 60 + now.getSeconds())
-}
+const INTERVAL = 300 // seconds
 
 function formatSecs(secs: number): string {
   const m = Math.floor(secs / 60)
@@ -21,31 +11,46 @@ function formatSecs(secs: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+function timeAgo(date: Date): string {
+  const secs = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (secs < 60) return 'just now'
+  return `${Math.floor(secs / 60)}m ago`
+}
+
 export default function RefreshBar() {
+  const [secs, setSecs] = useState(INTERVAL)
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
-  const [secs, setSecs] = useState(secsUntilNextCron())
   const [loading, setLoading] = useState(false)
-  const refreshingRef = useRef(false)
+  const [tick, setTick] = useState(0)
+  const loadingRef = useRef(false)
 
   const refresh = useCallback(async () => {
-    if (refreshingRef.current) return
-    refreshingRef.current = true
+    if (loadingRef.current) return
+    loadingRef.current = true
     setLoading(true)
     try {
       await fetch('/api/refresh', { method: 'POST' })
       setLastRefreshed(new Date())
+      setSecs(INTERVAL)
       window.location.reload()
     } catch {
+      setSecs(INTERVAL)
+    } finally {
+      loadingRef.current = false
       setLoading(false)
-      refreshingRef.current = false
     }
   }, [])
 
   useEffect(() => {
     const id = setInterval(() => {
-      const s = secsUntilNextCron()
-      setSecs(s)
-      if (s === 0) refresh()
+      setSecs((prev) => {
+        if (prev <= 1) {
+          refresh()
+          return INTERVAL
+        }
+        return prev - 1
+      })
+      setTick((t) => t + 1)
     }, 1000)
     return () => clearInterval(id)
   }, [refresh])
