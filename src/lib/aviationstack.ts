@@ -59,24 +59,37 @@ export async function lookupFlightSchedule(
     if (!flight) return null
   }
 
-  // Use the requested date with the scheduled time-of-day from the template flight
-  const depTemplate = new Date(flight.departure.scheduled)
-  const arrTemplate = new Date(flight.arrival.scheduled)
+  // AviationStack returns local airport times incorrectly labeled as +00:00.
+  // Parse them as wall-clock times (no timezone), then build a Date using the
+  // LOCAL time constructor so the resulting UTC is correct for the user's timezone.
+  const depH = parseInt(flight.departure.scheduled.slice(11, 13))
+  const depM = parseInt(flight.departure.scheduled.slice(14, 16))
+  const arrH = parseInt(flight.arrival.scheduled.slice(11, 13))
+  const arrM = parseInt(flight.arrival.scheduled.slice(14, 16))
 
-  const depDate = new Date(date)
-  depDate.setUTCHours(depTemplate.getUTCHours(), depTemplate.getUTCMinutes(), 0, 0)
+  // Return as bare local-time strings (no timezone suffix) so toDatetimeLocal
+  // passes them through without applying a UTC offset on top.
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const depStr = `${date}T${pad(depH)}:${pad(depM)}:00`
 
-  // Preserve overnight flights
-  const durationMs = arrTemplate.getTime() - depTemplate.getTime()
-  const arrDate = new Date(depDate.getTime() + durationMs)
+  // Preserve overnight arrivals
+  let arrDay = date
+  const depMinutes = depH * 60 + depM
+  const arrMinutes = arrH * 60 + arrM
+  if (arrMinutes < depMinutes) {
+    const d = new Date(date)
+    d.setDate(d.getDate() + 1)
+    arrDay = d.toISOString().slice(0, 10)
+  }
+  const arrStr = `${arrDay}T${pad(arrH)}:${pad(arrM)}:00`
 
   return {
     flight_number: flight.flight.iata ?? flightIata,
     airline: flight.airline.name,
     origin_code: flight.departure.iata,
     destination_code: flight.arrival.iata,
-    departure_time: depDate.toISOString(),
-    arrival_time: arrDate.toISOString(),
+    departure_time: depStr,
+    arrival_time: arrStr,
     aircraft_type: flight.aircraft?.iata ?? null,
     status: 'scheduled',
     actual_departure_time: null,
