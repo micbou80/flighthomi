@@ -27,11 +27,18 @@ export default async function DashboardPage() {
   const flightData = (flights as Flight[]) ?? []
 
   return (
-    <div className="space-y-8">
-      <RefreshBar />
-      <FlightCalendar flights={flightData} />
-      <FlightList flights={flightData} />
-      <ShareLinkManager tokens={(tokens as ShareToken[]) ?? []} />
+    <div className="flex gap-8 items-start">
+      {/* Main content */}
+      <div className="flex-1 min-w-0 space-y-8">
+        <RefreshBar />
+        <FlightList flights={flightData} />
+        <ShareLinkManager tokens={(tokens as ShareToken[]) ?? []} />
+      </div>
+
+      {/* Sidebar */}
+      <aside className="hidden lg:block w-64 shrink-0">
+        <FlightCalendar flights={flightData} />
+      </aside>
     </div>
   )
 }

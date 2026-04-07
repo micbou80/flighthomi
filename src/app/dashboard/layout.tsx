@@ -17,9 +17,9 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar email={user.email ?? ''} />
-      <main className="flex-1 px-4 py-6 max-w-3xl mx-auto w-full">
+      <div className="flex-1 w-full max-w-6xl mx-auto px-4 py-6">
         {children}
-      </main>
+      </div>
     </div>
   )
 }
