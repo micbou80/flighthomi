@@ -24,17 +24,23 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // Try FlightAware first — may throw if date is out of their data range
+  let result = null
   try {
-    const result = await lookupFlight(fn, date)
-    if (result) return NextResponse.json(result)
+    result = await lookupFlight(fn, date)
+  } catch {
+    // FlightAware has no data for this date — fall through to schedule lookup
+  }
 
-    // FlightAware has no data yet (flight too far out) — try AviationStack schedule
+  if (result) return NextResponse.json(result)
+
+  // Fallback: AviationStack schedule data (works for flights weeks out)
+  try {
     const scheduled = await lookupFlightSchedule(fn, date)
     if (scheduled) return NextResponse.json(scheduled)
-
-    return NextResponse.json({ error: 'Flight not found' }, { status: 404 })
   } catch (err) {
-    console.error('Flight lookup error:', err)
-    return NextResponse.json({ error: 'Lookup failed' }, { status: 502 })
+    console.error('AviationStack lookup error:', err)
   }
+
+  return NextResponse.json({ error: 'Flight not found' }, { status: 404 })
 }
