@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { lookupFlight } from '@/lib/flightaware'
+import { lookupFlightSchedule } from '@/lib/aviationstack'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
@@ -25,12 +26,15 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await lookupFlight(fn, date)
-    if (!result) {
-      return NextResponse.json({ error: 'Flight not found' }, { status: 404 })
-    }
-    return NextResponse.json(result)
+    if (result) return NextResponse.json(result)
+
+    // FlightAware has no data yet (flight too far out) — try AviationStack schedule
+    const scheduled = await lookupFlightSchedule(fn, date)
+    if (scheduled) return NextResponse.json(scheduled)
+
+    return NextResponse.json({ error: 'Flight not found' }, { status: 404 })
   } catch (err) {
-    console.error('FlightAware lookup error:', err)
+    console.error('Flight lookup error:', err)
     return NextResponse.json({ error: 'Lookup failed' }, { status: 502 })
   }
 }
