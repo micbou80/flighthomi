@@ -21,7 +21,6 @@ export default function RefreshBar() {
   const [secs, setSecs] = useState(INTERVAL)
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
   const [loading, setLoading] = useState(false)
-  const [tick, setTick] = useState(0)
   const loadingRef = useRef(false)
 
   const refresh = useCallback(async () => {
@@ -50,7 +49,6 @@ export default function RefreshBar() {
         }
         return prev - 1
       })
-      setTick((t) => t + 1)
     }, 1000)
     return () => clearInterval(id)
   }, [refresh])
