@@ -1,4 +1,4 @@
-export type FlightStatus = 'scheduled' | 'in_air' | 'landed' | 'cancelled'
+export type FlightStatus = 'scheduled' | 'taxiing' | 'in_air' | 'landed' | 'cancelled'
 
 export interface Flight {
   id: string
@@ -24,6 +24,12 @@ export interface Flight {
   departure_gate_changed: boolean
   arrival_gate_changed: boolean
   route: string | null
+  fa_flight_id: string | null
+  last_lat: number | null
+  last_lon: number | null
+  last_heading: number | null
+  last_altitude: number | null
+  track_points: Array<{ lat: number; lon: number }> | null
   created_at: string
 }
 
@@ -70,4 +76,9 @@ export interface FlightLookupResult {
   departure_gate: string | null
   arrival_gate: string | null
   route: string | null
+  fa_flight_id: string | null
+  last_lat: number | null
+  last_lon: number | null
+  last_heading: number | null
+  last_altitude: number | null
 }

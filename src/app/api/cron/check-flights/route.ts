@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { lookupFlight } from '@/lib/flightaware'
+import { lookupFlight, getFlightTrack } from '@/lib/flightaware'
 import type { Flight } from '@/lib/types'
 
 export const runtime = 'nodejs'
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   const { data: flights, error } = await supabase
     .from('flights')
     .select('*')
-    .in('status', ['scheduled', 'in_air'])
+    .in('status', ['scheduled', 'taxiing', 'in_air'])
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -32,8 +32,20 @@ export async function GET(request: NextRequest) {
   const notifications: { flight_id: string; user_id: string; message: string }[] = []
   const updates: { id: string; [key: string]: unknown }[] = []
 
+  const windowMs = 3 * 60 * 60 * 1000 // 3 hours in ms
+  let skipped = 0
+
   for (const flight of flights as Flight[]) {
     try {
+      // Only call API for scheduled flights within 3h of departure (or already past)
+      if (flight.status === 'scheduled') {
+        const depTime = new Date(flight.departure_time).getTime()
+        if (depTime > Date.now() + windowMs) {
+          skipped++
+          continue
+        }
+      }
+
       const date = (flight.departure_time ?? today).slice(0, 10)
       const fresh = await lookupFlight(flight.flight_number, date)
       if (!fresh) continue
@@ -45,6 +57,7 @@ export async function GET(request: NextRequest) {
       if (fresh.status !== flight.status) {
         const labels: Record<string, string> = {
           scheduled: 'scheduled',
+          taxiing: 'taxiing',
           in_air: 'in the air ✈️',
           landed: 'landed',
           cancelled: 'cancelled ❌',
@@ -81,6 +94,17 @@ export async function GET(request: NextRequest) {
       const departureGateChanged = !!(fresh.departure_gate && fresh.departure_gate !== flight.departure_gate && flight.departure_gate !== null)
       const arrivalGateChanged = !!(fresh.arrival_gate && fresh.arrival_gate !== flight.arrival_gate && flight.arrival_gate !== null)
 
+      // Fetch track for active flights
+      let trackPoints: Array<{ lat: number; lon: number }> | null = null
+      const faId = fresh.fa_flight_id ?? flight.fa_flight_id
+      if (faId && (fresh.status === 'in_air' || fresh.status === 'taxiing')) {
+        try {
+          trackPoints = await getFlightTrack(faId)
+        } catch (err) {
+          console.error(`Error fetching track for ${flight.flight_number}:`, err)
+        }
+      }
+
       // Always update tracking fields
       updates.push({
         id: flight.id,
@@ -95,6 +119,12 @@ export async function GET(request: NextRequest) {
         arrival_gate: fresh.arrival_gate,
         departure_gate_changed: departureGateChanged,
         arrival_gate_changed: arrivalGateChanged,
+        fa_flight_id: faId ?? null,
+        last_lat: fresh.last_lat,
+        last_lon: fresh.last_lon,
+        last_heading: fresh.last_heading,
+        last_altitude: fresh.last_altitude,
+        ...(trackPoints !== null ? { track_points: trackPoints } : {}),
       })
     } catch (err) {
       console.error(`Error checking flight ${flight.flight_number}:`, err)
@@ -113,7 +143,8 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({
-    checked: flights.length,
+    checked: flights.length - skipped,
+    skipped,
     updated: updates.length,
     notifications: notifications.length,
   })

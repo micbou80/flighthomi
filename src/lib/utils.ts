@@ -30,6 +30,8 @@ export function getStatusColor(status: FlightStatus): string {
   switch (status) {
     case 'scheduled':
       return 'bg-blue-500/20 text-blue-300 ring-blue-500/30'
+    case 'taxiing':
+      return 'bg-yellow-500/20 text-yellow-300 ring-yellow-500/30'
     case 'in_air':
       return 'bg-green-500/20 text-green-300 ring-green-500/30'
     case 'landed':
@@ -43,6 +45,8 @@ export function statusLabel(status: FlightStatus): string {
   switch (status) {
     case 'scheduled':
       return 'Scheduled'
+    case 'taxiing':
+      return 'Taxiing'
     case 'in_air':
       return 'In Air'
     case 'landed':

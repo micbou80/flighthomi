@@ -2,7 +2,19 @@ import type { FlightLookupResult, FlightStatus } from './types'
 
 const AEROAPI_BASE = 'https://aeroapi.flightaware.com/aeroapi'
 
+interface AeroAPIPosition {
+  latitude: number
+  longitude: number
+  altitude: number
+  heading: number | null
+  groundspeed: number
+  timestamp: string
+  altitude_change: string
+  update_type: string
+}
+
 interface AeroAPIFlight {
+  fa_flight_id: string | null
   ident: string
   operator: string
   origin: { code_iata: string }
@@ -20,15 +32,21 @@ interface AeroAPIFlight {
   gate_origin: string | null
   gate_destination: string | null
   route: string | null
+  last_position: AeroAPIPosition | null
 }
 
 interface AeroAPIResponse {
   flights: AeroAPIFlight[]
 }
 
+interface TrackResponse {
+  positions: AeroAPIPosition[]
+}
+
 function mapStatus(raw: string): FlightStatus {
   const s = raw.toLowerCase()
-  if (s.includes('en route') || s.includes('departed') || s.includes('taxi') || s.includes('takeoff')) return 'in_air'
+  if (s.includes('taxi')) return 'taxiing'
+  if (s.includes('en route') || s.includes('departed') || s.includes('takeoff')) return 'in_air'
   if (s.includes('arrived') || s.includes('landed')) return 'landed'
   if (s.includes('cancelled') || s.includes('canceled')) return 'cancelled'
   return 'scheduled'
@@ -67,6 +85,8 @@ export async function lookupFlight(
   const flight = data.flights?.[0]
   if (!flight) return null
 
+  const pos = flight.last_position
+
   return {
     flight_number: flight.ident,
     airline: flight.operator,
@@ -85,5 +105,32 @@ export async function lookupFlight(
     departure_gate: flight.gate_origin ?? null,
     arrival_gate: flight.gate_destination ?? null,
     route: flight.route ?? null,
+    fa_flight_id: flight.fa_flight_id ?? null,
+    last_lat: pos?.latitude ?? null,
+    last_lon: pos?.longitude ?? null,
+    last_heading: pos?.heading ?? null,
+    last_altitude: pos?.altitude ?? null,
   }
+}
+
+export async function getFlightTrack(
+  faFlightId: string
+): Promise<Array<{ lat: number; lon: number }>> {
+  const apiKey = process.env.FLIGHTAWARE_API_KEY
+  if (!apiKey) throw new Error('FLIGHTAWARE_API_KEY is not set')
+
+  const url = `${AEROAPI_BASE}/flights/${encodeURIComponent(faFlightId)}/track`
+
+  const res = await fetch(url, {
+    headers: { 'x-apikey': apiKey },
+    next: { revalidate: 0 },
+  })
+
+  if (!res.ok) {
+    if (res.status === 404) return []
+    throw new Error(`FlightAware track API error: ${res.status}`)
+  }
+
+  const data: TrackResponse = await res.json()
+  return (data.positions ?? []).map((p) => ({ lat: p.latitude, lon: p.longitude }))
 }

@@ -16,7 +16,7 @@ const flightSchema = z.object({
   destination_code: z.string().length(3, 'Must be 3-letter IATA code').toUpperCase(),
   departure_time: z.string().min(1, 'Required'),
   arrival_time: z.string().min(1, 'Required'),
-  status: z.enum(['scheduled', 'in_air', 'landed', 'cancelled']),
+  status: z.enum(['scheduled', 'taxiing', 'in_air', 'landed', 'cancelled']),
   aircraft_type: z.string().optional(),
   seat: z.string().optional(),
   notes: z.string().optional(),

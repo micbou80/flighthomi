@@ -1,8 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Plane, ChevronDown, ChevronUp } from 'lucide-react'
+
+const FlightMap = dynamic(() => import('./FlightMap'), {
+  ssr: false,
+  loading: () => <div className="h-[280px] rounded-lg bg-gray-900 animate-pulse mt-2" />,
+})
 import { formatDuration } from '@/lib/utils'
 import { LocalTime, LocalDate, TimezoneLabel } from './LocalTime'
 import FlightStatusBadge from './FlightStatusBadge'
@@ -11,6 +17,13 @@ import type { Flight } from '@/lib/types'
 interface FlightCardProps {
   flight: Flight
   readOnly?: boolean
+}
+
+function fmtDateTime(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+  } catch { return iso }
 }
 
 function formatMins(mins: number): string {
@@ -152,9 +165,9 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
             ['Progress', flight.progress_percent != null ? `${flight.progress_percent}%` : null],
             ['Dep delay', flight.departure_delay != null ? `${flight.departure_delay}m` : null],
             ['Arr delay', flight.arrival_delay != null ? `${flight.arrival_delay}m` : null],
-            ['Actual dep', flight.actual_departure_time],
-            ['Actual arr', flight.actual_arrival_time],
-            ['ETA', flight.estimated_arrival_time],
+            ['Actual dep', fmtDateTime(flight.actual_departure_time)],
+            ['Actual arr', fmtDateTime(flight.actual_arrival_time)],
+            ['ETA', fmtDateTime(flight.estimated_arrival_time)],
             ['Dep gate', flight.departure_gate],
             ['Arr gate', flight.arrival_gate],
             ['Route', flight.route],
@@ -169,6 +182,31 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
     </div>
   )
 
-  if (readOnly) return card
-  return <Link href={`/dashboard/flights/${flight.id}`}>{card}</Link>
+  const hasMap =
+    flight.status === 'in_air' &&
+    flight.last_lat != null &&
+    flight.last_lon != null &&
+    flight.track_points != null &&
+    flight.track_points.length > 0
+
+  const inner = (
+    <div>
+      {card}
+      {hasMap && (
+        <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+          <FlightMap
+            trackPoints={flight.track_points!}
+            lastLat={flight.last_lat!}
+            lastLon={flight.last_lon!}
+            lastHeading={flight.last_heading}
+            originCode={flight.origin_code}
+            destinationCode={flight.destination_code}
+          />
+        </div>
+      )}
+    </div>
+  )
+
+  if (readOnly) return inner
+  return <Link href={`/dashboard/flights/${flight.id}`}>{inner}</Link>
 }
