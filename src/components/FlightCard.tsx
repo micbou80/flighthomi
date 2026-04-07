@@ -1,5 +1,8 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
-import { Plane } from 'lucide-react'
+import { Plane, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatDuration } from '@/lib/utils'
 import { LocalTime, LocalDate, TimezoneLabel } from './LocalTime'
 import FlightStatusBadge from './FlightStatusBadge'
@@ -18,6 +21,7 @@ function formatMins(mins: number): string {
 }
 
 export default function FlightCard({ flight, readOnly = false }: FlightCardProps) {
+  const [nerd, setNerd] = useState(false)
   const isInAir = flight.status === 'in_air'
 
   let progress = flight.progress_percent ?? 0
@@ -130,8 +134,38 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
         <span className="flex items-center gap-2">
           {flight.aircraft_type && <span>{flight.aircraft_type}</span>}
           {flight.seat && <span>Seat {flight.seat}</span>}
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNerd(v => !v) }}
+            className="text-gray-600 hover:text-gray-400 transition-colors"
+            title="Nerd mode"
+          >
+            {nerd ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </button>
         </span>
       </div>
+
+      {/* Nerd mode panel */}
+      {nerd && (
+        <div className="mt-3 pt-3 border-t border-gray-800 grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono">
+          {[
+            ['Status', flight.status],
+            ['Progress', flight.progress_percent != null ? `${flight.progress_percent}%` : null],
+            ['Dep delay', flight.departure_delay != null ? `${flight.departure_delay}m` : null],
+            ['Arr delay', flight.arrival_delay != null ? `${flight.arrival_delay}m` : null],
+            ['Actual dep', flight.actual_departure_time],
+            ['Actual arr', flight.actual_arrival_time],
+            ['ETA', flight.estimated_arrival_time],
+            ['Dep gate', flight.departure_gate],
+            ['Arr gate', flight.arrival_gate],
+            ['Route', flight.route],
+          ].map(([label, value]) => (
+            <div key={label as string} className="flex gap-1">
+              <span className="text-gray-600 shrink-0">{label}:</span>
+              <span className="text-gray-400 truncate">{value ?? '—'}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 
