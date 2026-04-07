@@ -38,6 +38,8 @@ export async function GET(request: NextRequest) {
       const fresh = await lookupFlight(flight.flight_number, date)
       if (!fresh) continue
 
+      console.log(`[${flight.flight_number}] status=${fresh.status} gate=${fresh.departure_gate ?? 'null'} progress=${fresh.progress_percent}`)
+
       const changes: string[] = []
 
       if (fresh.status !== flight.status) {

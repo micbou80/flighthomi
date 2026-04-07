@@ -28,7 +28,7 @@ interface AeroAPIResponse {
 
 function mapStatus(raw: string): FlightStatus {
   const s = raw.toLowerCase()
-  if (s.includes('en route') || s.includes('departed')) return 'in_air'
+  if (s.includes('en route') || s.includes('departed') || s.includes('taxi') || s.includes('takeoff')) return 'in_air'
   if (s.includes('arrived') || s.includes('landed')) return 'landed'
   if (s.includes('cancelled') || s.includes('canceled')) return 'cancelled'
   return 'scheduled'
