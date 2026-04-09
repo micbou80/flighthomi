@@ -113,7 +113,7 @@ export default function PastTripCard({ flights }: PastTripCardProps) {
           {aircraftTypes.size > 0 && (
             <span className="flex items-center gap-1 text-gray-500">
               <Plane className="h-3 w-3" />
-              {[...aircraftTypes].join(', ')}
+              {Array.from(aircraftTypes).join(', ')}
             </span>
           )}
           {cancelled > 0 && (
