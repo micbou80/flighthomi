@@ -30,6 +30,9 @@ export interface Flight {
   last_heading: number | null
   last_altitude: number | null
   track_points: Array<{ lat: number; lon: number }> | null
+  inbound_delay_mins: number | null
+  inbound_origin_code: string | null
+  inbound_fa_flight_id: string | null
   created_at: string
 }
 

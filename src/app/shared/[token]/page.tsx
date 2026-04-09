@@ -1,5 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import FlightList from '@/components/FlightList'
+import SharedHero from '@/components/SharedHero'
+import AutoRefresh from '@/components/AutoRefresh'
 import type { Flight } from '@/lib/types'
 import { PlaneTakeoff } from 'lucide-react'
 
@@ -8,7 +10,6 @@ export default async function SharedPage({
 }: {
   params: { token: string }
 }) {
-  // Use service role key server-side — never exposed to the browser
   const supabase = createServiceClient()
 
   const { data: tokenRow } = await supabase
@@ -17,7 +18,6 @@ export default async function SharedPage({
     .eq('token', params.token)
     .single()
 
-  // Don't return 404 — avoid revealing whether a token ever existed
   if (!tokenRow) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
@@ -38,19 +38,23 @@ export default async function SharedPage({
     .eq('user_id', tokenRow.user_id)
     .order('departure_time', { ascending: true })
 
+  const flightList = (flights as Flight[]) ?? []
+
   return (
     <div className="min-h-screen">
+      <AutoRefresh intervalMs={60000} />
       <header className="border-b border-gray-800 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-white font-semibold">
             <PlaneTakeoff className="h-5 w-5 text-blue-400" />
             Flighthomi
           </div>
-          <span className="text-xs text-gray-500">Shared — read only</span>
+          <span className="text-xs text-gray-500">Live · updates every minute</span>
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
-        <FlightList flights={(flights as Flight[]) ?? []} readOnly />
+        <SharedHero flights={flightList} />
+        <FlightList flights={flightList} readOnly />
       </main>
     </div>
   )

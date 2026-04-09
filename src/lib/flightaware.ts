@@ -113,6 +113,70 @@ export async function lookupFlight(
   }
 }
 
+export interface InboundFlight {
+  faFlightId: string
+  originCode: string
+  delayMins: number | null
+  status: string
+  estimatedIn: string | null
+}
+
+/**
+ * Finds the most recent arrival at an airport by a given operator within a
+ * time window. Used to detect delays in the inbound aircraft before the
+ * outbound departure board reflects them.
+ *
+ * Returns null if the API is unavailable or no matching arrival is found.
+ */
+export async function getInboundFlight(
+  airportCode: string,
+  operator: string, // e.g. 'KLM', 'Lufthansa'
+  beforeTime: Date,
+  windowHours = 6,
+): Promise<InboundFlight | null> {
+  const apiKey = process.env.FLIGHTAWARE_API_KEY
+  if (!apiKey) return null
+
+  const start = new Date(beforeTime.getTime() - windowHours * 60 * 60 * 1000).toISOString()
+  const end = beforeTime.toISOString()
+
+  const url =
+    `${AEROAPI_BASE}/airports/${encodeURIComponent(airportCode)}/flights/arrivals` +
+    `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&max_pages=1&type=Airline`
+
+  try {
+    const res = await fetch(url, {
+      headers: { 'x-apikey': apiKey },
+      next: { revalidate: 0 },
+    })
+    if (!res.ok) return null
+
+    const data = await res.json()
+    const arrivals: AeroAPIFlight[] = data.arrivals ?? []
+
+    // Find most recent arrival by same operator (most likely inbound aircraft)
+    const match = arrivals
+      .filter((a) => a.operator?.toLowerCase().includes(operator.toLowerCase().slice(0, 4)))
+      .sort((a, b) => {
+        const ta = new Date(a.scheduled_in ?? a.actual_on ?? 0).getTime()
+        const tb = new Date(b.scheduled_in ?? b.actual_on ?? 0).getTime()
+        return tb - ta // most recent first
+      })[0]
+
+    if (!match || !match.fa_flight_id) return null
+
+    return {
+      faFlightId: match.fa_flight_id,
+      originCode: match.origin?.code_iata ?? '',
+      delayMins: secToMin(match.arrival_delay),
+      status: match.status ?? '',
+      estimatedIn: match.estimated_in ?? null,
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function getFlightTrack(
   faFlightId: string
 ): Promise<Array<{ lat: number; lon: number }>> {

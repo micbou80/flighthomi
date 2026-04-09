@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { lookupFlight, getFlightTrack } from '@/lib/flightaware'
+import { lookupFlight, getFlightTrack, getInboundFlight } from '@/lib/flightaware'
 import type { Flight } from '@/lib/types'
 
 export const runtime = 'nodejs'
@@ -65,6 +65,33 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Check inbound aircraft for scheduled flights within 6h of departure
+      let inboundDelayMins: number | null = null
+      let inboundOriginCode: string | null = null
+      let inboundFaFlightId: string | null = null
+
+      if (fresh.status === 'scheduled') {
+        const depTime = new Date(flight.departure_time)
+        const sixHoursMs = 6 * 60 * 60 * 1000
+        if (depTime.getTime() - Date.now() < sixHoursMs) {
+          try {
+            const inbound = await getInboundFlight(
+              flight.origin_code,
+              flight.airline,
+              depTime,
+            )
+            if (inbound) {
+              inboundDelayMins = inbound.delayMins
+              inboundOriginCode = inbound.originCode
+              inboundFaFlightId = inbound.faFlightId
+              console.log(`[${flight.flight_number}] inbound=${inbound.originCode} delay=${inbound.delayMins}m`)
+            }
+          } catch (err) {
+            console.error(`Error fetching inbound for ${flight.flight_number}:`, err)
+          }
+        }
+      }
+
       // Always update tracking fields
       updates.push({
         id: flight.id,
@@ -80,6 +107,9 @@ export async function GET(request: NextRequest) {
         departure_gate_changed: departureGateChanged,
         arrival_gate_changed: arrivalGateChanged,
         fa_flight_id: faId ?? null,
+        inbound_delay_mins: inboundDelayMins,
+        inbound_origin_code: inboundOriginCode,
+        inbound_fa_flight_id: inboundFaFlightId,
         last_lat: fresh.last_lat,
         last_lon: fresh.last_lon,
         last_heading: fresh.last_heading,
