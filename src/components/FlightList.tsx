@@ -26,17 +26,28 @@ function isBeforeToday(iso: string, ref: Date): boolean {
   return d < today
 }
 
-// Group flights into trips by chaining origin → destination
+// Group flights into trips. A trip ends when a flight returns to the trip's
+// starting airport (home base). e.g. AMS→LHR + LHR→AMS = one London trip.
+// The next AMS→OSL then starts a fresh trip.
 function groupIntoTrips(flights: Flight[]): Flight[][] {
   if (flights.length === 0) return []
   const groups: Flight[][] = []
   let current: Flight[] = [flights[0]]
+
   for (let i = 1; i < flights.length; i++) {
     const prev = current[current.length - 1]
     const curr = flights[i]
-    if (curr.origin_code === prev.destination_code) {
+    const tripHome = current[0].origin_code
+
+    if (prev.destination_code === tripHome) {
+      // Previous flight returned home — close trip, start a new one
+      groups.push(current)
+      current = [curr]
+    } else if (curr.origin_code === prev.destination_code) {
+      // Continues from where the last leg landed — same trip
       current.push(curr)
     } else {
+      // Chain broken — start a new trip
       groups.push(current)
       current = [curr]
     }
