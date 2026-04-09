@@ -103,7 +103,7 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
                   className="absolute -translate-x-1/2"
                   style={{ left: `${Math.min(progress, 96)}%` }}
                 >
-                  <Plane className="h-4 w-4 text-blue-400" />
+                  <Plane className="h-4 w-4 text-blue-400" style={{ transform: 'rotate(-45deg)' }} />
                 </div>
               </div>
               <div className="flex justify-between w-full text-xs">
