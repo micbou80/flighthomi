@@ -182,10 +182,14 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
     </div>
   )
 
+  const lastTrack = flight.track_points?.[flight.track_points.length - 1] ?? null
+  const mapLat = flight.last_lat ?? lastTrack?.lat ?? null
+  const mapLon = flight.last_lon ?? lastTrack?.lon ?? null
+
   const hasMap =
     flight.status === 'in_air' &&
-    flight.last_lat != null &&
-    flight.last_lon != null &&
+    mapLat != null &&
+    mapLon != null &&
     flight.track_points != null &&
     flight.track_points.length > 0
 
@@ -196,8 +200,8 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
         <div className="mt-2" onClick={(e) => e.stopPropagation()}>
           <FlightMap
             trackPoints={flight.track_points!}
-            lastLat={flight.last_lat!}
-            lastLon={flight.last_lon!}
+            lastLat={mapLat!}
+            lastLon={mapLon!}
             lastHeading={flight.last_heading}
             originCode={flight.origin_code}
             destinationCode={flight.destination_code}
