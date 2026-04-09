@@ -47,9 +47,12 @@ function groupIntoTrips(flights: Flight[]): Flight[][] {
 
 function tripTitle(flights: Flight[]): string {
   const home = flights[0].origin_code
-  const uniqueDests = [...new Set(flights.map((f) => f.destination_code))].filter(
-    (d) => d !== home
-  )
+  const seen = new Set<string>()
+  const uniqueDests = flights.map((f) => f.destination_code).filter((d) => {
+    if (d === home || seen.has(d)) return false
+    seen.add(d)
+    return true
+  })
   return uniqueDests.length > 0 ? uniqueDests.join(' · ') : flights[flights.length - 1].destination_code
 }
 
