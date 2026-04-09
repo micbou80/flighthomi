@@ -100,6 +100,7 @@ export async function lookupFlightSchedule(
     arrival_delay: null,
     departure_gate: null,
     arrival_gate: null,
+    baggage_claim: null,
     route: null,
     fa_flight_id: null,
     last_lat: null,
