@@ -25,6 +25,7 @@ export default function RefreshBar({ hasActiveFlights = false }: { hasActiveFlig
   const [loading, setLoading] = useState(false)
   const loadingRef = useRef(false)
   const pageLoadTime = useRef(Date.now())
+  const intervalRef = useRef(INTERVAL)
 
   // Manual "Refresh now" — calls API to force a FlightAware update, then reloads
   const manualRefresh = useCallback(async () => {
@@ -40,6 +41,9 @@ export default function RefreshBar({ hasActiveFlights = false }: { hasActiveFlig
       window.location.reload()
     }
   }, [])
+
+  // Keep ref in sync so the visibility handler always reads the latest interval
+  intervalRef.current = INTERVAL
 
   // Auto-reload countdown — just reloads the page; LaunchAgent keeps DB fresh
   useEffect(() => {
@@ -59,12 +63,12 @@ export default function RefreshBar({ hasActiveFlights = false }: { hasActiveFlig
     return () => clearInterval(id)
   }, [INTERVAL])
 
-  // Reload when tab becomes visible after being hidden for >5 minutes
+  // Reload when tab becomes visible after being hidden for >interval seconds
   useEffect(() => {
     const onVisible = () => {
       if (
         document.visibilityState === 'visible' &&
-        Date.now() - pageLoadTime.current > INTERVAL * 1000
+        Date.now() - pageLoadTime.current > intervalRef.current * 1000
       ) {
         window.location.reload()
       }
