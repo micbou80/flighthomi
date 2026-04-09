@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { lookupFlight, getFlightTrack, getInboundFlight } from '@/lib/flightaware'
+import { getAirportWeather } from '@/lib/weather'
 import type { Flight } from '@/lib/types'
 
 export const runtime = 'nodejs'
@@ -92,6 +93,21 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Fetch destination weather for active (non-landed) flights
+      let destTempC: number | null = null
+      let destWeatherCode: number | null = null
+      if (fresh.status !== 'landed' && fresh.status !== 'cancelled') {
+        try {
+          const wx = await getAirportWeather(flight.destination_code)
+          if (wx) {
+            destTempC = wx.tempC
+            destWeatherCode = wx.code
+          }
+        } catch {
+          // non-fatal
+        }
+      }
+
       // Always update tracking fields
       updates.push({
         id: flight.id,
@@ -104,6 +120,7 @@ export async function GET(request: NextRequest) {
         arrival_delay: fresh.arrival_delay,
         departure_gate: fresh.departure_gate,
         arrival_gate: fresh.arrival_gate,
+        baggage_claim: fresh.baggage_claim,
         departure_gate_changed: departureGateChanged,
         arrival_gate_changed: arrivalGateChanged,
         fa_flight_id: faId ?? null,
@@ -114,6 +131,7 @@ export async function GET(request: NextRequest) {
         last_lon: fresh.last_lon,
         last_heading: fresh.last_heading,
         last_altitude: fresh.last_altitude,
+        ...(destTempC !== null ? { destination_temp_c: destTempC, destination_weather_code: destWeatherCode } : {}),
         ...(trackPoints !== null ? { track_points: trackPoints } : {}),
       })
     } catch (err) {

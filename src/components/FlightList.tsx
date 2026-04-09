@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ChevronDown, ChevronUp, Plane } from 'lucide-react'
 import FlightCard from './FlightCard'
+import PastTripCard from './PastTripCard'
 import type { Flight } from '@/lib/types'
 
 interface FlightListProps {
@@ -206,9 +207,9 @@ export default function FlightList({ flights, readOnly = false }: FlightListProp
             {pastOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </button>
           {pastOpen && (
-            <div className="space-y-3 opacity-70">
+            <div className="space-y-3 opacity-80">
               {pastTrips.map((trip, i) => (
-                <TripGroup key={i} flights={trip} readOnly={readOnly} defaultOpen={false} />
+                <PastTripCard key={i} flights={trip} />
               ))}
             </div>
           )}

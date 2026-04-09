@@ -12,6 +12,8 @@ const FlightMap = dynamic(() => import('./FlightMap'), {
 import { formatDuration } from '@/lib/utils'
 import { LocalTime, LocalDate, TimezoneLabel } from './LocalTime'
 import FlightStatusBadge from './FlightStatusBadge'
+import { weatherEmoji, weatherDescription } from '@/lib/weather'
+import { getAirportCoords } from '@/lib/airports'
 import type { Flight } from '@/lib/types'
 
 interface FlightCardProps {
@@ -141,6 +143,26 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
         </div>
       </div>
 
+      {/* Weather + baggage strip */}
+      {(flight.destination_temp_c != null || flight.baggage_claim) && (
+        <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+          {flight.destination_temp_c != null && flight.status !== 'landed' && flight.status !== 'cancelled' && (
+            <span className="flex items-center gap-1">
+              <span>{weatherEmoji(flight.destination_weather_code ?? 0)}</span>
+              <span className="text-gray-300">{flight.destination_temp_c}°C</span>
+              <span className="text-gray-500">{weatherDescription(flight.destination_weather_code ?? 0)}</span>
+              <span className="text-gray-600">at landing</span>
+            </span>
+          )}
+          {flight.baggage_claim && flight.status === 'landed' && (
+            <span className="flex items-center gap-1 text-blue-400 font-medium">
+              <span>🧳</span>
+              <span>Carousel {flight.baggage_claim}</span>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Bottom row: airline + flight # + aircraft */}
       <div className="flex items-center justify-between text-xs text-gray-400">
         <span>{flight.airline} · {flight.flight_number}</span>
@@ -185,6 +207,7 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
   const lastTrack = flight.track_points?.[flight.track_points.length - 1] ?? null
   const mapLat = flight.last_lat ?? lastTrack?.lat ?? null
   const mapLon = flight.last_lon ?? lastTrack?.lon ?? null
+  const destCoords = getAirportCoords(flight.destination_code)
 
   const hasMap =
     flight.status === 'in_air' &&
@@ -205,6 +228,8 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
             lastHeading={flight.last_heading}
             originCode={flight.origin_code}
             destinationCode={flight.destination_code}
+            destinationLat={destCoords?.lat ?? null}
+            destinationLon={destCoords?.lon ?? null}
           />
         </div>
       )}

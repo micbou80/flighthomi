@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { RefreshCw } from 'lucide-react'
 
-const INTERVAL = 300 // seconds
+const INTERVAL_DEFAULT = 300
+const INTERVAL_ACTIVE = 60
 
 function formatSecs(secs: number): string {
   const m = Math.floor(secs / 60)
@@ -17,7 +18,8 @@ function timeAgo(date: Date): string {
   return `${Math.floor(secs / 60)}m ago`
 }
 
-export default function RefreshBar() {
+export default function RefreshBar({ hasActiveFlights = false }: { hasActiveFlights?: boolean }) {
+  const INTERVAL = hasActiveFlights ? INTERVAL_ACTIVE : INTERVAL_DEFAULT
   const [secs, setSecs] = useState(INTERVAL)
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
   const [loading, setLoading] = useState(false)
@@ -41,6 +43,10 @@ export default function RefreshBar() {
 
   // Auto-reload countdown — just reloads the page; LaunchAgent keeps DB fresh
   useEffect(() => {
+    setSecs(INTERVAL)
+  }, [INTERVAL])
+
+  useEffect(() => {
     const id = setInterval(() => {
       setSecs((prev) => {
         if (prev <= 1) {
@@ -51,7 +57,7 @@ export default function RefreshBar() {
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [INTERVAL])
 
   // Reload when tab becomes visible after being hidden for >5 minutes
   useEffect(() => {

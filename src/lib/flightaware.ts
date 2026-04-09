@@ -31,6 +31,7 @@ interface AeroAPIFlight {
   arrival_delay: number | null    // seconds
   gate_origin: string | null
   gate_destination: string | null
+  baggage_claim: string | null
   route: string | null
   last_position: AeroAPIPosition | null
 }
@@ -104,6 +105,7 @@ export async function lookupFlight(
     arrival_delay: secToMin(flight.arrival_delay),
     departure_gate: flight.gate_origin ?? null,
     arrival_gate: flight.gate_destination ?? null,
+    baggage_claim: flight.baggage_claim ?? null,
     route: flight.route ?? null,
     fa_flight_id: flight.fa_flight_id ?? null,
     last_lat: pos?.latitude ?? null,

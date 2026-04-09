@@ -33,6 +33,9 @@ export interface Flight {
   inbound_delay_mins: number | null
   inbound_origin_code: string | null
   inbound_fa_flight_id: string | null
+  baggage_claim: string | null
+  destination_temp_c: number | null
+  destination_weather_code: number | null
   created_at: string
 }
 
@@ -78,6 +81,7 @@ export interface FlightLookupResult {
   arrival_delay: number | null
   departure_gate: string | null
   arrival_gate: string | null
+  baggage_claim: string | null
   route: string | null
   fa_flight_id: string | null
   last_lat: number | null

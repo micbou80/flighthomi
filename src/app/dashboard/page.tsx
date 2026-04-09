@@ -25,12 +25,15 @@ export default async function DashboardPage() {
   ])
 
   const flightData = (flights as Flight[]) ?? []
+  const hasActiveFlights = flightData.some(
+    (f) => f.status === 'in_air' || f.status === 'taxiing'
+  )
 
   return (
     <div className="flex gap-8 items-start">
       {/* Main content */}
       <div className="flex-1 min-w-0 space-y-8">
-        <RefreshBar />
+        <RefreshBar hasActiveFlights={hasActiveFlights} />
         <FlightList flights={flightData} />
         <ShareLinkManager tokens={(tokens as ShareToken[]) ?? []} />
       </div>
