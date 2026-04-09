@@ -140,28 +140,18 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
               {flight.arrival_gate}
             </span>
           )}
-        </div>
-      </div>
-
-      {/* Weather + baggage strip */}
-      {(flight.destination_temp_c != null || flight.baggage_claim) && (
-        <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
           {flight.destination_temp_c != null && flight.status !== 'landed' && flight.status !== 'cancelled' && (
-            <span className="flex items-center gap-1">
-              <span>{weatherEmoji(flight.destination_weather_code ?? 0)}</span>
-              <span className="text-gray-300">{flight.destination_temp_c}°C</span>
-              <span className="text-gray-500">{weatherDescription(flight.destination_weather_code ?? 0)}</span>
-              <span className="text-gray-600">at landing</span>
-            </span>
+            <p className="mt-1 text-xs text-gray-500">
+              {weatherEmoji(flight.destination_weather_code ?? 0)} {flight.destination_temp_c}°C
+            </p>
           )}
           {flight.baggage_claim && flight.status === 'landed' && (
-            <span className="flex items-center gap-1 text-blue-400 font-medium">
-              <span>🧳</span>
-              <span>Carousel {flight.baggage_claim}</span>
-            </span>
+            <p className="mt-1 text-xs text-blue-400 font-medium">
+              🧳 {flight.baggage_claim}
+            </p>
           )}
         </div>
-      )}
+      </div>
 
       {/* Bottom row: airline + flight # + aircraft */}
       <div className="flex items-center justify-between text-xs text-gray-400">
