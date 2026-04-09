@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
   }
 
   const today = new Date().toISOString().slice(0, 10)
-  const notifications: { flight_id: string; user_id: string; message: string }[] = []
   const updates: { id: string; [key: string]: unknown }[] = []
 
   const windowMs = 3 * 60 * 60 * 1000 // 3 hours in ms
@@ -51,45 +50,6 @@ export async function GET(request: NextRequest) {
       if (!fresh) continue
 
       console.log(`[${flight.flight_number}] status=${fresh.status} gate=${fresh.departure_gate ?? 'null'} progress=${fresh.progress_percent}`)
-
-      const changes: string[] = []
-
-      if (fresh.status !== flight.status) {
-        const labels: Record<string, string> = {
-          scheduled: 'scheduled',
-          taxiing: 'taxiing',
-          in_air: 'in the air ✈️',
-          landed: 'landed',
-          cancelled: 'cancelled ❌',
-        }
-        changes.push(`${flight.flight_number} is now ${labels[fresh.status] ?? fresh.status}`)
-      }
-
-      if (fresh.departure_gate && fresh.departure_gate !== flight.departure_gate) {
-        changes.push(`Departure gate: ${fresh.departure_gate}`)
-      }
-
-      if (fresh.arrival_gate && fresh.arrival_gate !== flight.arrival_gate) {
-        changes.push(`Arrival gate: ${fresh.arrival_gate}`)
-      }
-
-      const newDelay = fresh.arrival_delay ?? fresh.departure_delay ?? null
-      const oldDelay = flight.arrival_delay ?? flight.departure_delay ?? null
-      if (newDelay !== null && newDelay !== oldDelay) {
-        if (newDelay === 0) {
-          changes.push(`${flight.flight_number} is now on time`)
-        } else if (newDelay > 0) {
-          changes.push(`${flight.flight_number} delayed ${newDelay}m`)
-        }
-      }
-
-      if (changes.length > 0) {
-        notifications.push({
-          flight_id: flight.id,
-          user_id: flight.user_id,
-          message: `✈️ ${flight.origin_code}→${flight.destination_code}: ${changes.join(' · ')}`,
-        })
-      }
 
       const departureGateChanged = !!(fresh.departure_gate && fresh.departure_gate !== flight.departure_gate && flight.departure_gate !== null)
       const arrivalGateChanged = !!(fresh.arrival_gate && fresh.arrival_gate !== flight.arrival_gate && flight.arrival_gate !== null)
@@ -137,15 +97,9 @@ export async function GET(request: NextRequest) {
     await supabase.from('flights').update(fields).eq('id', id)
   }
 
-  // Write notifications
-  if (notifications.length > 0) {
-    await supabase.from('flight_notifications').insert(notifications)
-  }
-
   return NextResponse.json({
     checked: flights.length - skipped,
     skipped,
     updated: updates.length,
-    notifications: notifications.length,
   })
 }
