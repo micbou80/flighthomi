@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Plane } from 'lucide-react'
 import FlightCard from './FlightCard'
 import type { Flight } from '@/lib/types'
 
@@ -26,6 +26,92 @@ function isBeforeToday(iso: string, ref: Date): boolean {
   return d < today
 }
 
+// Group flights into trips by chaining origin → destination
+function groupIntoTrips(flights: Flight[]): Flight[][] {
+  if (flights.length === 0) return []
+  const groups: Flight[][] = []
+  let current: Flight[] = [flights[0]]
+  for (let i = 1; i < flights.length; i++) {
+    const prev = current[current.length - 1]
+    const curr = flights[i]
+    if (curr.origin_code === prev.destination_code) {
+      current.push(curr)
+    } else {
+      groups.push(current)
+      current = [curr]
+    }
+  }
+  groups.push(current)
+  return groups
+}
+
+function tripTitle(flights: Flight[]): string {
+  const home = flights[0].origin_code
+  const uniqueDests = [...new Set(flights.map((f) => f.destination_code))].filter(
+    (d) => d !== home
+  )
+  return uniqueDests.length > 0 ? uniqueDests.join(' · ') : flights[flights.length - 1].destination_code
+}
+
+function fmtShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
+}
+
+function tripDateRange(flights: Flight[]): string {
+  const first = fmtShortDate(flights[0].departure_time)
+  const last = fmtShortDate(flights[flights.length - 1].departure_time)
+  return first === last ? first : `${first} – ${last}`
+}
+
+// Collapsible trip group used in Upcoming and Past
+function TripGroup({
+  flights,
+  readOnly,
+  defaultOpen = false,
+}: {
+  flights: Flight[]
+  readOnly: boolean
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const title = tripTitle(flights)
+  const dateRange = tripDateRange(flights)
+  const legs = flights.length
+
+  return (
+    <div className="rounded-xl border border-gray-700 bg-gray-900/50 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Plane className="h-4 w-4 text-gray-400 shrink-0" />
+          <div className="text-left">
+            <span className="text-sm font-semibold text-white">{title}</span>
+            <span className="ml-3 text-xs text-gray-400">{dateRange}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-xs text-gray-500">{legs} {legs === 1 ? 'flight' : 'flights'}</span>
+          {open ? (
+            <ChevronUp className="h-4 w-4 text-gray-500" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-gray-500" />
+          )}
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-700/50 px-3 pb-3 pt-3 space-y-3">
+          {flights.map((f) => (
+            <FlightCard key={f.id} flight={f} readOnly={readOnly} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function FlightList({ flights, readOnly = false }: FlightListProps) {
   const [pastOpen, setPastOpen] = useState(false)
   const now = new Date()
@@ -37,12 +123,18 @@ export default function FlightList({ flights, readOnly = false }: FlightListProp
       (f.status === 'scheduled' && isSameLocalDay(f.departure_time, now))
   )
   const upcoming = flights.filter(
-    (f) => f.status === 'scheduled' && !isSameLocalDay(f.departure_time, now) && !isBeforeToday(f.departure_time, now)
+    (f) =>
+      f.status === 'scheduled' &&
+      !isSameLocalDay(f.departure_time, now) &&
+      !isBeforeToday(f.departure_time, now)
   )
   const past = flights
     .filter((f) => f.status === 'landed' || f.status === 'cancelled')
     .slice()
     .reverse()
+
+  const upcomingTrips = groupIntoTrips(upcoming)
+  const pastTrips = groupIntoTrips(past)
 
   if (flights.length === 0) {
     return (
@@ -76,20 +168,20 @@ export default function FlightList({ flights, readOnly = false }: FlightListProp
         </section>
       )}
 
-      {upcoming.length > 0 && (
+      {upcomingTrips.length > 0 && (
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">
             Upcoming Flights
           </h2>
           <div className="space-y-3">
-            {upcoming.map((f) => (
-              <FlightCard key={f.id} flight={f} readOnly={readOnly} />
+            {upcomingTrips.map((trip, i) => (
+              <TripGroup key={i} flights={trip} readOnly={readOnly} />
             ))}
           </div>
         </section>
       )}
 
-      {past.length > 0 && (
+      {pastTrips.length > 0 && (
         <section>
           <button
             onClick={() => setPastOpen((v) => !v)}
@@ -101,8 +193,8 @@ export default function FlightList({ flights, readOnly = false }: FlightListProp
           </button>
           {pastOpen && (
             <div className="space-y-3 opacity-70">
-              {past.map((f) => (
-                <FlightCard key={f.id} flight={f} readOnly={readOnly} />
+              {pastTrips.map((trip, i) => (
+                <TripGroup key={i} flights={trip} readOnly={readOnly} defaultOpen={false} />
               ))}
             </div>
           )}
