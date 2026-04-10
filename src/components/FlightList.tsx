@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ChevronDown, ChevronUp, Plane } from 'lucide-react'
 import FlightCard from './FlightCard'
 import PastTripCard from './PastTripCard'
+import ShareItinerary from './ShareItinerary'
 import type { Flight } from '@/lib/types'
 
 interface FlightListProps {
@@ -185,9 +186,12 @@ export default function FlightList({ flights, readOnly = false }: FlightListProp
 
       {upcomingTrips.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">
-            Upcoming Flights
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+              Upcoming Flights
+            </h2>
+            <ShareItinerary flights={upcoming} />
+          </div>
           <div className="space-y-3">
             {upcomingTrips.map((trip, i) => (
               <TripGroup key={i} flights={trip} readOnly={readOnly} />

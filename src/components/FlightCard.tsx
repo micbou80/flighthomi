@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Plane, ChevronDown, ChevronUp } from 'lucide-react'
@@ -37,6 +37,24 @@ function formatMins(mins: number): string {
 
 export default function FlightCard({ flight, readOnly = false }: FlightCardProps) {
   const [nerd, setNerd] = useState(false)
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  const [delayStats, setDelayStats] = useState<{ onTimePct: number; sampleSize: number } | null>(null)
+
+  // Countdown tick — updates every 30s for gate countdown accuracy
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Delay stats — fetch once for scheduled flights, cache 24h on server
+  useEffect(() => {
+    if (flight.status !== 'scheduled') return
+    fetch(`/api/delay-stats?flight=${encodeURIComponent(flight.flight_number)}`)
+      .then((r) => r.json())
+      .then((data) => { if (data) setDelayStats(data) })
+      .catch(() => {})
+  }, [flight.flight_number, flight.status])
+
   const isInAir = flight.status === 'in_air'
 
   let progress = flight.progress_percent ?? 0
@@ -61,6 +79,27 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
 
   const delay = flight.arrival_delay ?? flight.departure_delay ?? null
   const hasDelay = delay != null && delay > 0
+
+  // Gate countdown — show when gate is assigned and departure is within 2h
+  const minsToGate = Math.floor((new Date(flight.departure_time).getTime() - nowMs) / 60000)
+  const showGateCountdown =
+    flight.status === 'scheduled' &&
+    flight.departure_gate != null &&
+    minsToGate > 0 &&
+    minsToGate <= 120
+
+  const countdownText =
+    minsToGate <= 1 ? 'Boarding now' : `Boarding in ${minsToGate}m`
+
+  const countdownStyle =
+    minsToGate > 90
+      ? 'bg-green-900/30 text-green-400 border border-green-800/50'
+      : minsToGate > 45
+      ? 'bg-amber-900/30 text-amber-400 border border-amber-800/50'
+      : 'bg-red-900/30 text-red-400 border border-red-800/50'
+
+  // Live approach link — show when < 20 min to landing
+  const showLiveApproach = isInAir && remainingMins > 0 && remainingMins <= 20
 
   const card = (
     <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 hover:border-gray-700 transition-colors">
@@ -110,7 +149,20 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
               </div>
               <div className="flex justify-between w-full text-xs">
                 <span className="text-gray-500">{formatMins(elapsedMins)} flown</span>
-                <span className="text-green-400 font-medium">{formatMins(remainingMins)} left</span>
+                {showLiveApproach ? (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      window.open(`https://www.flightradar24.com/${flight.flight_number}`, '_blank', 'noopener,noreferrer')
+                    }}
+                    className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                  >
+                    Live approach →
+                  </button>
+                ) : (
+                  <span className="text-green-400 font-medium">{formatMins(remainingMins)} left</span>
+                )}
               </div>
             </>
           ) : (
@@ -153,9 +205,27 @@ export default function FlightCard({ flight, readOnly = false }: FlightCardProps
         </div>
       </div>
 
-      {/* Bottom row: airline + flight # + aircraft */}
+      {/* Gate countdown — shown when gate is assigned and departure < 2h */}
+      {showGateCountdown && (
+        <div className={`flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 mb-3 text-xs font-medium ${countdownStyle}`}>
+          <span>Gate {flight.departure_gate} · {countdownText}</span>
+        </div>
+      )}
+
+      {/* Bottom row: airline + flight # + delay stats + aircraft + seat */}
       <div className="flex items-center justify-between text-xs text-gray-400">
-        <span>{flight.airline} · {flight.flight_number}</span>
+        <span className="flex items-center gap-2">
+          <span>{flight.airline} · {flight.flight_number}</span>
+          {delayStats && (
+            <span className={
+              delayStats.onTimePct >= 80 ? 'text-green-600' :
+              delayStats.onTimePct >= 60 ? 'text-amber-600' :
+              'text-red-600'
+            }>
+              {delayStats.onTimePct}% on time
+            </span>
+          )}
+        </span>
         <span className="flex items-center gap-2">
           {flight.aircraft_type && <span>{flight.aircraft_type}</span>}
           {flight.seat && <span>Seat {flight.seat}</span>}
