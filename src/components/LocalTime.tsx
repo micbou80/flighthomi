@@ -30,8 +30,8 @@ function getTimezone(): string {
 export function LocalTime({ iso }: { iso: string }) {
   const [time, setTime] = useState<string | null>(null)
   useEffect(() => setTime(toLocalTime(iso)), [iso])
-  // Fallback: show HH:MM from UTC while JS loads
-  return <span>{time ?? iso.slice(11, 16)}</span>
+  // Fallback: show HH:MM in local time while JS loads
+  return <span>{time ?? toLocalTime(iso)}</span>
 }
 
 export function LocalDate({ iso }: { iso: string }) {

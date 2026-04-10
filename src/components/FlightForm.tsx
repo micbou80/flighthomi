@@ -27,7 +27,8 @@ type FlightFormValues = z.infer<typeof flightSchema>
 function toDatetimeLocal(iso: string) {
   if (!iso) return ''
   // No timezone suffix = already a local time (e.g. from AviationStack schedule)
-  if (!iso.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(iso)) {
+  // Match +00, +00:00, +0000 — Supabase returns +HH (2-digit) offsets
+  if (!iso.endsWith('Z') && !/[+-]\d{2}(?::?\d{2})?$/.test(iso)) {
     return iso.slice(0, 16)
   }
   const d = new Date(iso)
