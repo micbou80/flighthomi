@@ -37,11 +37,13 @@ function formatMins(mins: number): string {
 
 export default function FlightCard({ flight, readOnly = false }: FlightCardProps) {
   const [nerd, setNerd] = useState(false)
-  const [nowMs, setNowMs] = useState(() => Date.now())
+  // Initialize to 0 so server and client agree on first render (no hydration mismatch)
+  const [nowMs, setNowMs] = useState(0)
   const [delayStats, setDelayStats] = useState<{ onTimePct: number; sampleSize: number } | null>(null)
 
-  // Countdown tick — updates every 30s for gate countdown accuracy
+  // Set real time only on client, then tick every 30s
   useEffect(() => {
+    setNowMs(Date.now())
     const id = setInterval(() => setNowMs(Date.now()), 30_000)
     return () => clearInterval(id)
   }, [])
