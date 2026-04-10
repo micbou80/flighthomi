@@ -30,14 +30,14 @@ function getTimezone(): string {
 export function LocalTime({ iso }: { iso: string }) {
   const [time, setTime] = useState<string | null>(null)
   useEffect(() => setTime(toLocalTime(iso)), [iso])
-  // suppressHydrationWarning: server may render in UTC, client renders in local tz
-  return <span suppressHydrationWarning>{time ?? toLocalTime(iso)}</span>
+  // Render blank until client hydrates — avoids UTC flash on server-rendered HTML
+  return <span>{time ?? ''}</span>
 }
 
 export function LocalDate({ iso }: { iso: string }) {
   const [date, setDate] = useState<string | null>(null)
   useEffect(() => setDate(toLocalDate(iso)), [iso])
-  return <span suppressHydrationWarning>{date ?? iso.slice(0, 10)}</span>
+  return <span>{date ?? ''}</span>
 }
 
 export function TimezoneLabel({ className }: { className?: string }) {
