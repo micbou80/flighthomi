@@ -12,7 +12,7 @@ const FlightMap = dynamic(() => import('./FlightMap'), {
 import { formatDuration } from '@/lib/utils'
 import { LocalTime, LocalDate, TimezoneLabel } from './LocalTime'
 import FlightStatusBadge from './FlightStatusBadge'
-import { weatherEmoji, weatherDescription } from '@/lib/weather'
+import { weatherEmoji } from '@/lib/weather'
 import { getAirportCoords } from '@/lib/airports'
 import type { Flight } from '@/lib/types'
 
