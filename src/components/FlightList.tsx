@@ -13,6 +13,21 @@ interface FlightListProps {
   readOnly?: boolean
 }
 
+// Airports in the same metro area — treat as interchangeable for trip grouping
+const METRO: Record<string, string> = {
+  LHR: 'LON', LGW: 'LON', STN: 'LON', LTN: 'LON', LCY: 'LON',
+  CDG: 'PAR', ORY: 'PAR',
+  FCO: 'ROM', CIA: 'ROM',
+  LIN: 'MIL', MXP: 'MIL', BGY: 'MIL',
+  BER: 'BER', TXL: 'BER', SXF: 'BER',
+  OSL: 'OSL', TRF: 'OSL',
+  ARN: 'STO', BMA: 'STO', NYO: 'STO',
+  JFK: 'NYC', EWR: 'NYC', LGA: 'NYC',
+  LAX: 'LAX', BUR: 'LAX', LGB: 'LAX', SNA: 'LAX',
+  SFO: 'SFB', OAK: 'SFB', SJC: 'SFB',
+}
+function metro(code: string): string { return METRO[code] ?? code }
+
 function isSameLocalDay(iso: string, ref: Date): boolean {
   const d = new Date(iso)
   return (
@@ -41,11 +56,11 @@ function groupIntoTrips(flights: Flight[]): Flight[][] {
     const curr = flights[i]
     const tripHome = current[0].origin_code
 
-    if (prev.destination_code === tripHome) {
+    if (metro(prev.destination_code) === metro(tripHome)) {
       // Previous flight returned home — close trip, start a new one
       groups.push(current)
       current = [curr]
-    } else if (curr.origin_code === prev.destination_code) {
+    } else if (metro(curr.origin_code) === metro(prev.destination_code)) {
       // Continues from where the last leg landed — same trip
       current.push(curr)
     } else {
