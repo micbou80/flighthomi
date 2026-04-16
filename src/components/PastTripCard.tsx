@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Clock, AlertCircle, Plane } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ChevronDown, ChevronUp, Clock, AlertCircle, Plane, Trash2 } from 'lucide-react'
 import FlightCard from './FlightCard'
 import type { Flight } from '@/lib/types'
 
@@ -44,6 +45,17 @@ function airportPath(flights: Flight[]): string {
 
 export default function PastTripCard({ flights }: PastTripCardProps) {
   const [open, setOpen] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const router = useRouter()
+
+  async function handleDelete(id: string) {
+    setDeletingId(id)
+    await fetch(`/api/flights/${id}`, { method: 'DELETE' })
+    setDeletingId(null)
+    setConfirmId(null)
+    router.refresh()
+  }
 
   // Compute stats
   let totalAirMins = 0
@@ -126,7 +138,36 @@ export default function PastTripCard({ flights }: PastTripCardProps) {
       {open && (
         <div className="border-t border-gray-700/40 px-3 pb-3 pt-3 space-y-3">
           {flights.map((f) => (
-            <FlightCard key={f.id} flight={f} readOnly />
+            <div key={f.id} className="relative group">
+              <FlightCard flight={f} readOnly />
+              <div className="absolute top-3 right-3 flex items-center gap-2">
+                {confirmId === f.id ? (
+                  <>
+                    <button
+                      onClick={() => handleDelete(f.id)}
+                      disabled={deletingId === f.id}
+                      className="text-xs text-red-400 hover:text-red-300 font-medium"
+                    >
+                      {deletingId === f.id ? 'Deleting…' : 'Delete'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(null)}
+                      className="text-xs text-gray-500 hover:text-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setConfirmId(f.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-gray-600 hover:text-red-400"
+                    title="Delete flight"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}
