@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       }
 
       const date = (flight.departure_time ?? today).slice(0, 10)
-      const fresh = await lookupFlight(flight.flight_number, date)
+      const fresh = await lookupFlight(flight.flight_number, date, flight.fa_flight_id)
       if (!fresh) continue
 
       console.log(`[${flight.flight_number}] status=${fresh.status} gate=${fresh.departure_gate ?? 'null'} progress=${fresh.progress_percent}`)

@@ -60,17 +60,24 @@ function secToMin(seconds: number | null): number | null {
 
 export async function lookupFlight(
   flightNumber: string,
-  date: string // YYYY-MM-DD
+  date: string, // YYYY-MM-DD
+  faFlightId?: string | null,
 ): Promise<FlightLookupResult | null> {
   const apiKey = process.env.FLIGHTAWARE_API_KEY
   if (!apiKey) throw new Error('FLIGHTAWARE_API_KEY is not set')
 
-  const start = `${date}T00:00:00Z`
-  const nextDay = new Date(date)
-  nextDay.setDate(nextDay.getDate() + 1)
-  const end = `${nextDay.toISOString().slice(0, 10)}T00:00:00Z`
-
-  const url = `${AEROAPI_BASE}/flights/${encodeURIComponent(flightNumber)}?start=${start}&end=${end}`
+  // Querying by fa_flight_id returns the specific flight with complete data
+  // (including gate), whereas searching by ident+date sometimes omits gate.
+  let url: string
+  if (faFlightId) {
+    url = `${AEROAPI_BASE}/flights/${encodeURIComponent(faFlightId)}`
+  } else {
+    const start = `${date}T00:00:00Z`
+    const nextDay = new Date(date)
+    nextDay.setDate(nextDay.getDate() + 1)
+    const end = `${nextDay.toISOString().slice(0, 10)}T00:00:00Z`
+    url = `${AEROAPI_BASE}/flights/${encodeURIComponent(flightNumber)}?start=${start}&end=${end}`
+  }
 
   const res = await fetch(url, {
     headers: { 'x-apikey': apiKey },
